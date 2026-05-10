@@ -1,0 +1,45 @@
+# Cloudflare Tunnel Routes for Hermes (Phase A)
+#
+# These routes are managed via the Cloudflare Dashboard, not a local config file.
+# The tunnel on the OCI instance uses a token-based connector, so ingress rules
+# are configured remotely and picked up automatically by cloudflared.
+#
+# Dashboard location (choose one):
+#   - Main Dashboard: Networking → Tunnels → <your tunnel> → Routing Map
+#   - Zero Trust:     Networks → Connectors → <your tunnel> → Public Hostname
+#
+# Add the following public hostname routes to the existing tunnel:
+#
+# ┌──────────────────────────────────┬──────────────────────────────┐
+# │ Public Hostname                  │ Service                      │
+# ├──────────────────────────────────┼──────────────────────────────┤
+# │ goose.dirkweibel.dev             │ http://localhost:7681        │
+# │ hermes.dirkweibel.dev            │ http://localhost:9119        │
+# │ hermes-api.dirkweibel.dev        │ http://localhost:8081        │
+# └──────────────────────────────────┴──────────────────────────────┘
+#
+# No restart of cloudflared is needed — the connector picks up route changes
+# from the dashboard automatically.
+#
+# A single tunnel can serve unlimited public hostnames. There is no need to
+# create a separate tunnel for Hermes services.
+#
+# References:
+#   - https://developers.cloudflare.com/cloudflare-one/networks/connectors/cloudflare-tunnel/routing-to-tunnel/
+#   - https://developers.cloudflare.com/changelog/2026-02-20-tunnel-core-dashboard/
+
+# --- For reference only (not used by cloudflared on this instance) ---
+
+ingress:
+  # Goose Web Terminal
+  - hostname: goose.dirkweibel.dev
+    service: http://localhost:7681
+
+  # Hermes Dashboard / TUI Chat (native)
+  # Was localhost:3080 (Onyx Lite) — updated to native dashboard until Onyx is deployed
+  - hostname: hermes.dirkweibel.dev
+    service: http://localhost:9119
+
+  # Hermes API Server
+  - hostname: hermes-api.dirkweibel.dev
+    service: http://localhost:8081

@@ -1,0 +1,21 @@
+# Secrets
+.env
+.env.secrets
+
+# Script artifacts
+scripts/.cloud-init-generated.yaml
+scripts/.ssh-key-tmp
+scripts/.oci-retry-state
+scripts/oci-retry.log
+scripts/oci-cleanup.log
+
+#Kiro
+.kiro
+hermes-infra.code-workspace
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Playwright MCP artifacts
+.playwright-mcp/

@@ -1,0 +1,28 @@
+# Onyx Lite Override
+# Excludes heavy services (Vespa, Redis) and binds to port 3080.
+# Port 3080 avoids collision with Wiki.js on port 3000.
+#
+# Usage:
+#   podman compose -f docker-compose.yml -f docker-compose.onyx-lite.yml up -d
+
+services:
+  # Override web_server port to 3080 (Wiki.js occupies 3000)
+  web_server:
+    ports:
+      - "3080:3000"
+
+  # Override API server to disable vector DB and Redis in Lite mode
+  api_server:
+    environment:
+      - DISABLE_VECTOR_DB=true
+      - DISABLE_REDIS=true
+
+  # Exclude Vespa (not needed in Lite mode)
+  vespa:
+    profiles:
+      - full-only
+
+  # Exclude Redis (not needed in Lite mode)
+  redis:
+    profiles:
+      - full-only

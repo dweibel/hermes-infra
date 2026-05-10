@@ -1,0 +1,77 @@
+# Onyx Base Docker Compose Configuration
+# This is the base Onyx stack. Use with docker-compose.onyx-lite.yml override
+# to run in Lite mode (no Vespa, no Redis).
+#
+# Reference: https://github.com/onyx-dot-app/onyx/tree/main/deployment/docker_compose
+
+services:
+  # PostgreSQL database for Onyx
+  postgres:
+    image: postgres:15-alpine
+    container_name: onyx-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-onyx}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-onyx}
+      POSTGRES_DB: ${POSTGRES_DB:-onyx}
+    volumes:
+      - onyx-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-onyx}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Onyx API server
+  api_server:
+    image: ${ONYX_IMAGE:-onyxdotapp/onyx-api-server:latest}
+    container_name: onyx-api-server
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      - POSTGRES_HOST=postgres
+      - POSTGRES_USER=${POSTGRES_USER:-onyx}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-onyx}
+      - POSTGRES_DB=${POSTGRES_DB:-onyx}
+      - GEN_AI_API_ENDPOINT=${GEN_AI_API_ENDPOINT}
+      - GEN_AI_API_KEY=${GEN_AI_API_KEY}
+      - GEN_AI_MODEL_VERSION=${GEN_AI_MODEL_VERSION}
+      - DISABLE_GENERATIVE_AI=${DISABLE_GENERATIVE_AI:-false}
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+    env_file:
+      - .env
+
+  # Onyx web server (frontend)
+  web_server:
+    image: ${ONYX_WEB_IMAGE:-onyxdotapp/onyx-web-server:latest}
+    container_name: onyx-web-server
+    restart: unless-stopped
+    depends_on:
+      - api_server
+    ports:
+      - "${ONYX_PORT:-3000}:3000"
+    environment:
+      - INTERNAL_URL=http://api_server:8080
+      - WEB_DOMAIN=${WEB_DOMAIN:-}
+    env_file:
+      - .env
+
+  # Vespa search engine (used in full mode, excluded in Lite)
+  vespa:
+    image: vespaengine/vespa:latest
+    container_name: onyx-vespa
+    restart: unless-stopped
+    volumes:
+      - onyx-vespa-data:/opt/vespa/var
+
+  # Redis cache (used in full mode, excluded in Lite)
+  redis:
+    image: redis:7-alpine
+    container_name: onyx-redis
+    restart: unless-stopped
+
+volumes:
+  onyx-postgres-data:
+  onyx-vespa-data:

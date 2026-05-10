@@ -1,0 +1,37 @@
+# Hermes Agent Configuration
+# Deploy to: /mnt/workspace/hermes/config.yaml
+# Secrets are referenced via environment variables from the .env file.
+
+# Model configuration (used by the TUI chat and dashboard)
+model:
+  default: "deepseek/deepseek-v4-pro"
+  provider: "openrouter"
+
+agent:
+  name: "hermes"
+  llm_provider: "openrouter"
+  model: "deepseek/deepseek-v4-pro"
+  api_base: "https://openrouter.ai/api/v1"
+  api_key: "${OPENROUTER_API_KEY}"
+
+api_server:
+  enabled: true
+  port: 8081
+  api_key: "${HERMES_API_KEY}"
+
+webhook_gateway:
+  enabled: true
+  port: 8082
+  security_header: "${WEBHOOK_PASSPHRASE}"
+
+mcp_connections:
+  - name: "cloudflare-tools"
+    transport: "stdio"
+    command: "npx @cloudflare/mcp-server"
+    env:
+      CLOUDFLARE_API_TOKEN: "${CF_API_TOKEN}"
+      CLOUDFLARE_ACCOUNT_ID: "${CF_ACCOUNT_ID}"
+    tool_filter:
+      allow:
+        - "send_email"
+      deny: "*"
