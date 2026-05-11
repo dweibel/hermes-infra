@@ -14,6 +14,6 @@ Hermes is an autonomous AI agent that communicates via email and an OpenAI-compa
 See the dedicated documents for operational details:
 
 - [Runtime Environment](docs/RUNTIME-ENVIRONMENT.md) — compute, container, ports, DNS, and LLM details
-- [Logging In](docs/LOGGING-IN.md) — SSH access, container management, and remote API usage
+- [Logging In](docs/LOGGING-IN.md) — SSH access, container management, and remote API usage.  Read when you need to log into the remote OCI server.
 
 > **Note:** Use browser-based testing whenever possible to validate system behavior.

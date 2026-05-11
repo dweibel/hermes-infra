@@ -4,13 +4,13 @@
 
 # Model configuration (used by the TUI chat and dashboard)
 model:
-  default: "deepseek/deepseek-v4-pro"
+  default: "qwen/qwen3-coder-flash"
   provider: "openrouter"
 
 agent:
   name: "hermes"
   llm_provider: "openrouter"
-  model: "deepseek/deepseek-v4-pro"
+  model: "qwen/qwen3-coder-flash"
   api_base: "https://openrouter.ai/api/v1"
   api_key: "${OPENROUTER_API_KEY}"
 

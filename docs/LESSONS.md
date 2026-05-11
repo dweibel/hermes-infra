@@ -86,3 +86,99 @@ sudo cp /mnt/workspace/hermes/.env /mnt/workspace/hermes/.hermes/.env
 ```
 
 The `enable-dashboard.sh` script now uses `cp` instead of `ln -sf`.
+
+## auth.lock must be owned by the hermes user
+
+The `auth.lock` file in `/opt/data/` can end up owned by root (created during initial container setup or a prior run). The Hermes process runs as the `hermes` user and needs write access to acquire the lock. Without it, any operation touching authentication fails with `[Errno 13] Permission denied: '/opt/data/auth.lock'`.
+
+**Fix:**
+
+```bash
+podman exec hermes-agent chown hermes:hermes /opt/data/auth.lock /opt/data/auth.json
+```
+
+## "OCI Hermes" or "Live Hermes" means the live instance
+
+When referring to OCI Hermes or Live Hermes, this means the running instance at `ssh oci-agent` (`/mnt/workspace/hermes/home/job-search-pipeline/`), not the `oci-infra` repository.
+
+## Local files are not always authoritative over remote
+
+Do not assume the local copy of a file is newer or more correct than the remote. Ask or wait to be told which direction the sync should go.
+
+## Job-search-pipeline architecture
+
+The job-search-pipeline is a Hermes Agent skill set with a clear separation:
+
+- `Inputs/` — source of truth, mostly read-only (resume, preferences, experience bank, narratives)
+- `Memory/` — mutable pipeline state (lead tracker, closed archive, funnel analytics)
+- `.hermes/skills/` — agent behavior definitions
+
+The experience bank uses a **progressive disclosure** pattern: a lean YAML index (~250 lines, always read for matching) paired with a narrative vault (`Inputs/narratives/*.md`, unlimited size, read only when depth is needed for document generation). This keeps agent context small during gap analysis while allowing arbitrarily rich storytelling for output generation.
+
+## Use high reasoning models for resumes and cover letters
+
+When generating customized resumes and cover letters, use high reasoning models. The quality of tailoring, keyword placement, and narrative selection benefits significantly from deeper inference.
+
+## Changing models: checklist
+
+When updating the model tiers, the following files and locations must be changed:
+
+### 1. Tiered Model Selection Skill (live Hermes)
+
+**Location:** `/opt/data/skills/mlops/tiered-model-selection/SKILL.md` (inside the `hermes-agent` container)
+
+**Access:**
+```bash
+podman exec -i hermes-agent tee /opt/data/skills/mlops/tiered-model-selection/SKILL.md < new-skill.md
+```
+
+**What to update:**
+- Model IDs in the tier table
+- Cost per M tokens (input/output)
+- Description frontmatter
+- "When to Use Each Tier" section examples
+- Any model name references in Pitfalls or other sections
+
+### 2. Hermes config.yaml (gateway + dashboard default model)
+
+**Local:** `hermes-infra/config/config.yaml`
+**Live:** `/mnt/workspace/hermes/config.yaml` on the OCI host
+
+**What to update:**
+- `model.default` — the model used by the dashboard TUI
+- `agent.model` — the model used by the gateway for agent tasks
+
+**Deploy:**
+```bash
+cat config/config.yaml | ssh oci-agent 'sudo tee /mnt/workspace/hermes/config.yaml > /dev/null'
+ssh oci-agent 'podman restart hermes-agent'
+```
+
+The config.yaml default should typically be set to the **Standard** tier model (the everyday workhorse). Heavy and Budget models are selected per-task by the tiered-model-selection skill or via cron job overrides.
+
+### 3. Cron jobs with pinned models
+
+Cron jobs pin their model at creation time. After changing tiers, audit existing cron jobs:
+
+```bash
+podman exec hermes-agent hermes cron list
+```
+
+Jobs using old model IDs will continue using them until updated. Update with:
+```
+/cronjob update <job-name> model: {model: "new/model-id", provider: "openrouter"}
+```
+
+### 4. SOUL.md (if it references specific models)
+
+**Location:** `/opt/data/SOUL.md` (inside the container)
+
+Check if the system prompt references specific model names and update if needed.
+
+### Summary of current tiers (May 2026)
+
+| Tier | Model | OpenRouter ID | Cost (in/out per M) |
+|------|-------|---------------|---------------------|
+| Budget | GPT-5.4 Nano | `openai/gpt-5.4-nano` | $0.05 / $0.40 |
+| Standard | Qwen3 Coder Flash | `qwen/qwen3-coder-flash` | $0.30 / $1.50 |
+| Heavy | GPT-5.4 Mini | `openai/gpt-5.4-mini` | $0.25 / $2.00 |
