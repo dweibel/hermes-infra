@@ -182,3 +182,33 @@ Check if the system prompt references specific model names and update if needed.
 | Budget | GPT-5.4 Nano | `openai/gpt-5.4-nano` | $0.05 / $0.40 |
 | Standard | Qwen3 Coder Flash | `qwen/qwen3-coder-flash` | $0.30 / $1.50 |
 | Heavy | GPT-5.4 Mini | `openai/gpt-5.4-mini` | $0.25 / $2.00 |
+
+## File transfer to `/mnt/workspace/hermes/` requires sudo
+
+The `/mnt/workspace/hermes/` directory is owned by UID 109999 (the container's mapped user) with mode 700. The `opc` SSH user cannot read or write to it directly — all file operations there need `sudo`.
+
+Since `scp` cannot use `sudo`, the transfer pattern is:
+
+1. `scp` files to `/tmp/` on the remote host
+2. `ssh` with `sudo mv` (or `sudo cp`) to the final destination
+
+Files moved with `sudo mv` retain their original owner (`opc:opc`). Always follow up with `sudo chown` to the container UID (109999) so Hermes can write to them.
+
+```bash
+# Example: transfer local files to /mnt/workspace/hermes/activity/
+scp myfile.csv oci-agent:/tmp/
+ssh oci-agent "sudo mkdir -p /mnt/workspace/hermes/activity && sudo mv /tmp/myfile.csv /mnt/workspace/hermes/activity/"
+ssh oci-agent "sudo bash -c 'chown 109999:109999 /mnt/workspace/hermes/activity/*.csv'"
+```
+
+## Globs don't expand under `sudo` without a shell
+
+Running `sudo chown 109999:109999 /path/*.csv` over SSH fails because `sudo` does not invoke a shell to expand the glob. Wrap the command in `sudo bash -c '...'` to ensure glob expansion happens:
+
+```bash
+# Wrong — glob not expanded:
+ssh oci-agent "sudo chown 109999:109999 /mnt/workspace/hermes/activity/*.csv"
+
+# Correct — bash expands the glob:
+ssh oci-agent "sudo bash -c 'chown 109999:109999 /mnt/workspace/hermes/activity/*.csv'"
+```
