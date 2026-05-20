@@ -1,0 +1,14 @@
+name = "hermes-email-worker"
+main = "src/index.ts"
+compatibility_date = "2024-09-23"
+
+[vars]
+OCI_SERVER_IP = "193.122.215.174"
+
+# WEBHOOK_PASSPHRASE is set as a secret via:
+#   wrangler secret put WEBHOOK_PASSPHRASE
+
+# Email routing configuration
+# After deploying, configure in Cloudflare Dashboard:
+#   Email → Email Routing → Routing Rules → Custom addresses
+#   Route: agent@dirkweibel.dev → Worker: hermes-email-worker

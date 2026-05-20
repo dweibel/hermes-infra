@@ -2,6 +2,9 @@
 .env
 .env.secrets
 
+# Dependencies
+node_modules/
+
 # Script artifacts
 scripts/.cloud-init-generated.yaml
 scripts/.ssh-key-tmp

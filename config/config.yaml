@@ -3,14 +3,23 @@
 # Secrets are referenced via environment variables from the .env file.
 
 # Model configuration (used by the TUI chat and dashboard)
+# Three-tier model strategy:
+#   reasoning: deep multi-step logic, math, complex planning
+#   coding:    general purpose, code generation, tool use
+#   chat:      fast conversational responses, email drafting
 model:
-  default: "qwen/qwen3-coder-flash"
+  reasoning: "deepseek/deepseek-r1-0528"
+  coding: "deepseek/deepseek-v4-flash"
+  chat: "google/gemini-2.5-flash-lite"
+  default: "deepseek/deepseek-v4-flash"
   provider: "openrouter"
 
 agent:
   name: "hermes"
   llm_provider: "openrouter"
-  model: "qwen/qwen3-coder-flash"
+  model: "deepseek/deepseek-v4-flash"
+  reasoning_model: "deepseek/deepseek-r1-0528"
+  chat_model: "google/gemini-2.5-flash-lite"
   api_base: "https://openrouter.ai/api/v1"
   api_key: "${OPENROUTER_API_KEY}"
 
@@ -19,10 +28,19 @@ api_server:
   port: 8081
   api_key: "${HERMES_API_KEY}"
 
-webhook_gateway:
-  enabled: true
-  port: 8082
-  security_header: "${WEBHOOK_PASSPHRASE}"
+platforms:
+  webhook:
+    enabled: true
+    extra:
+      host: "0.0.0.0"
+      port: 8082
+      secret: "682b42ba429884e5f2385dd7d7304c42e81f21addb8d5c22e3f11aabbfedcfc2"
+      routes:
+        email:
+          events: ["email"]
+          secret: "682b42ba429884e5f2385dd7d7304c42e81f21addb8d5c22e3f11aabbfedcfc2"
+          prompt: "You received an email from {sender}.\nSubject: {topic}\n\nBody:\n{content}\n\nPlease compose a thoughtful reply."
+          skills: []
 
 mcp_connections:
   - name: "cloudflare-tools"
